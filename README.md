@@ -1,37 +1,71 @@
 # Sweekar - AI Companion Pet
 
-A local prototype for an AI pocket pet that evolves over time with memory.
+A local prototype for an AI pocket pet that evolves over time with advanced memory management.
 
 ## Features
 
 - **Pet Naming**: Name your AI companion on first run
-- **Chat Interface**: Interactive conversation with your pet
-- **Pet States**: Mood, hunger, and health tracking
-- **Memory System**: Short-term and long-term memory with automatic extraction
-- **Data Persistence**: All data stored locally in JSON/CSV files
+- **Interactive Chat**: Conversational interface with your pet
+- **Pet States**: Mood, hunger, and health tracking with visual indicators
+- **Advanced Memory System**:
+  - Short-term memory with score-based eviction
+  - Long-term memory with retrieval tracking
+  - User profile traits with strength decay
+  - Emotional valence estimation
+- **Data Persistence**: All data stored locally (JSON/CSV)
+- **Scheduled Memory Updates**: APScheduler-based daily extraction
 
-## Project Structure
+## Architecture
 
 ```
 sweekar/
-├── app.py                      # Main Streamlit UI entry
+├── app.py                      # Streamlit UI entry point
 ├── chat/
-│   └── chat_engine.py          # Chat processing and response generation
+│   └── chat_engine.py          # Chat processing + JSONL append-safe writes
 ├── memory/
-│   ├── memory_pipeline.py      # Memory extraction from conversations
-│   └── run_daily_update.py     # Scheduled memory update scheduler
+│   ├── memory_pipeline.py      # Advanced memory pipeline
+│   └── run_daily_update.py     # APScheduler-based memory updater
 ├── config/
 │   └── pet_config.py           # Pet configuration and state management
-├── storage/                    # Data storage (created on first run)
-│   ├── conversation.jsonl      # Chat history
-│   ├── short_memory.csv        # Short-term memory
-│   ├── long_memory.csv         # Long-term memory
-│   ├── user_profile.csv        # User traits and preferences
-│   └── pet_state.csv           # Pet state snapshot
-└── config/
-    ├── pet_config.json         # Pet name and settings
-    └── pet_state.json          # Live pet state
+└── storage/                    # Data storage (gitignored, regenerated on first run)
 ```
+
+## Memory System (Advanced)
+
+### Score-Based Eviction
+
+Short-term memory limited to 50 entries. Eviction uses weighted scoring:
+
+```
+score = 0.5 × recency + 0.3 × importance + 0.2 × (access_count / 10)
+```
+
+- **recency**: Time-based decay over 7 days
+- **importance**: Event type-based (emotion: 0.8, relationship: 0.9, goal: 0.7, preference: 0.5, fact: 0.4)
+- **access_count**: Incremented on each retrieval
+
+### Short-Term → Long-Term Promotion
+
+Memories are promoted when:
+- `score > 0.2` AND `access_count > 2`, OR
+- Same event appears 2+ times within 7 days
+
+### Trait Strength Decay
+
+Each new evidence updates trait strength:
+
+```
+new_strength = old_strength × 0.8 + signal × 0.2
+```
+
+Trait stability levels:
+- **stable**: strength > 0.7
+- **developing**: strength > 0.4
+- **emerging**: strength ≤ 0.4
+
+### Long-Term Memory Decay
+
+`retrieval_count` decrements by 1 if not retrieved for 30+ days.
 
 ## Installation
 
@@ -42,51 +76,61 @@ pip install streamlit apscheduler
 ## Running the App
 
 ```bash
-cd sweekar
+cd swekar
 streamlit run app.py
 ```
 
+Browser will open automatically at http://localhost:8501
+
 ## Running Memory Scheduler
 
-### As a background scheduler (24-hour interval):
+### As a background service (auto-updates every 24 hours):
+
 ```bash
 python -m memory.run_daily_update
 ```
 
 ### Run once manually:
+
 ```bash
 python -m memory.run_daily_update --once
 ```
 
 ### With custom interval:
+
 ```bash
 python -m memory.run_daily_update --interval 12
 ```
 
-## Data Storage Locations
+## Data Storage
 
 | File | Description |
 |------|-------------|
-| `storage/conversation.jsonl` | All chat messages (append-only) |
-| `storage/short_memory.csv` | Recent memories (last 100 entries) |
-| `storage/long_memory.csv` | Important/promoted memories |
-| `storage/user_profile.csv` | User traits extracted from chat |
-| `config/pet_config.json` | Pet name and settings |
-| `config/pet_state.json` | Current pet state (mood, hunger, health) |
+| `storage/conversation.jsonl` | All chat messages (append-only, gitignored) |
+| `storage/short_memory.json` | Short-term memory (score-based, max 50) |
+| `storage/long_memory.json` | Promoted long-term memories |
+| `storage/profile_events.csv` | Raw extracted events (append-only) |
+| `storage/profile_traits.csv` | User traits with strength decay |
+| `config/pet_config.json` | Pet name and settings (gitignored) |
+| `config/pet_state.json` | Live pet state (gitignored) |
 
-## Memory Pipeline
+## Memory Pipeline Flow
 
-The memory system automatically:
-1. Loads recent conversations (last 7 days)
-2. Extracts events, emotions, and preferences
-3. Updates short-term memory (recent events)
-4. Promotes frequent events to long-term memory
-5. Updates user profile traits with confidence scores
-6. Snapshots pet state to CSV
+1. Load recent conversations (last 7 days from JSONL)
+2. Extract events, emotions, preferences (keyword matching)
+3. Update short-term memory (scoring + eviction)
+4. Check for promotions to long-term memory
+5. Update user profile traits (strength decay)
+6. Apply time-based decay
+7. Persist to all storage files
 
-## Notes
+## Tech Stack
 
-- JSONL file uses append-only mode with fsync for safety
-- Memory entries have importance, recency, and access tracking
-- User traits use strength scoring (0.0-1.0) that evolves over time
-- Scheduler runs as a separate process from the main UI
+- **Frontend**: Streamlit
+- **Backend**: Python
+- **Storage**: JSONL (conversations), JSON (memories), CSV (profiles)
+- **Scheduler**: APScheduler
+
+## License
+
+MIT
