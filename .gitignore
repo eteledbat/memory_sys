@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+
+# Streamlit
+.streamlit/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Logs
+*.log
+
+# Runtime data (regenerate on first run)
+storage/*.jsonl
+storage/*.json
+storage/*.csv
+!storage/.gitkeep
+
+config/pet_config.json
+config/pet_state.json
+
+# Demo/reference files (keep source, not generated data)
+demo_sweekar1.0/*.json
+demo_sweekar1.0/*.csv
+!demo_sweekar1.0/memory_system.py
+!demo_sweekar1.0/run_memory_demo.py
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Misc
+*.bak
+*.tmp
