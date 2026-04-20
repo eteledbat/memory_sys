@@ -156,8 +156,21 @@ st.markdown("""
     /* Message timestamp */
     .timestamp {
         font-size: 11px;
-        color: #999;
+        color: #888;
         margin-top: 4px;
+    }
+
+    /* Stats text - darker color for visibility */
+    .stats-text {
+        color: #333;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    /* Memory preview text */
+    .memory-text {
+        color: #444;
+        font-size: 12px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -259,7 +272,7 @@ def render_pet_status():
         st.markdown(f"""
         <div class="status-card">
             <div style="font-size: 24px;">😊</div>
-            <div style="font-size: 12px; color: #888; margin-top: 4px;">MOOD</div>
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">MOOD</div>
             <div style="font-size: 20px; font-weight: 600; color: #ff6b6b;">{mood}%</div>
             <div style="margin-top: 8px;">
                 <div style="background: #f0f0f0; border-radius: 4px; height: 6px;">
@@ -274,7 +287,7 @@ def render_pet_status():
         st.markdown(f"""
         <div class="status-card">
             <div style="font-size: 24px;">🍖</div>
-            <div style="font-size: 12px; color: #888; margin-top: 4px;">HUNGER</div>
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">HUNGER</div>
             <div style="font-size: 20px; font-weight: 600; color: #ff6b6b;">{hunger}%</div>
             <div style="margin-top: 8px;">
                 <div style="background: #f0f0f0; border-radius: 4px; height: 6px;">
@@ -289,8 +302,8 @@ def render_pet_status():
         st.markdown(f"""
         <div class="status-card">
             <div style="font-size: 24px;">💚</div>
-            <div style="font-size: 12px; color: #888; margin-top: 4px;">HEALTH</div>
-            <div style="font-size: 20px; font-weight: 600; color: #ff6b6b;">{health}%</div>
+            <div style="font-size: 12px; color: #666; margin-top: 4px;">HEALTH</div>
+            <div style="font-size: 20px; font-weight: 600; color: #4CAF50;">{health}%</div>
             <div style="margin-top: 8px;">
                 <div style="background: #f0f0f0; border-radius: 4px; height: 6px;">
                     <div style="background: linear-gradient(90deg, #4CAF50, #8BC34A); height: 6px; border-radius: 4px; width: {health}%;"></div>
@@ -326,6 +339,7 @@ def render_chat_page():
     """Render the main chat interface"""
     pet_name = st.session_state.pet_config.config.get('pet_name', 'Pet')
     pet_emoji = "🐾"
+    is_using_api = st.session_state.chat_engine.is_using_api()
 
     # Header with pet name
     st.markdown(f"""
@@ -339,6 +353,12 @@ def render_chat_page():
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    # API status indicator
+    if is_using_api:
+        st.success("🤖 Connected to MiniMax AI")
+    else:
+        st.info("💡 Set MINIMAX_API_KEY env variable to enable AI responses")
 
     # Main content area using columns
     col_left, col_main, col_right = st.columns([1, 3, 1])
@@ -355,8 +375,8 @@ def render_chat_page():
         if st.button("🔄 Update Memory", use_container_width=True):
             with st.spinner("Updating memory..."):
                 pipeline = MemoryPipeline()
-                pipeline.run_daily_update()
-                st.success("Memory updated!")
+                result = pipeline.run_daily_update()
+                st.success(f"Updated! Events: {result['events_extracted']}, Short-term: {result['short_term_count']}")
 
     # Main column - Chat
     with col_main:
@@ -399,15 +419,15 @@ def render_chat_page():
     with col_right:
         st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
 
-        # Quick stats
+        # Quick stats - darker colors for readability
         stats = st.session_state.chat_engine.get_stats()
         st.markdown(f"""
         <div class="status-card">
             <h4 style="color: #ff6b6b; margin-bottom: 12px;">📊 Stats</h4>
-            <div style="text-align: left; font-size: 13px;">
-                <div style="margin: 8px 0;">💬 Messages: <strong>{stats.get('message_count', 0)}</strong></div>
-                <div style="margin: 8px 0;">📅 Days active: <strong>{stats.get('days_active', 1)}</strong></div>
-                <div style="margin: 8px 0;">🧠 Memory entries: <strong>{stats.get('memory_entries', 0)}</strong></div>
+            <div style="text-align: left;">
+                <div style="margin: 8px 0;" class="stats-text">💬 Messages: <strong>{stats.get('message_count', 0)}</strong></div>
+                <div style="margin: 8px 0;" class="stats-text">📅 Days active: <strong>{stats.get('days_active', 1)}</strong></div>
+                <div style="margin: 8px 0;" class="stats-text">🧠 Memory entries: <strong>{stats.get('memory_entries', 0)}</strong></div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -421,12 +441,21 @@ def render_chat_page():
 
         pipeline = MemoryPipeline()
         recent = pipeline.get_recent_memories(limit=3)
-        for mem in recent:
-            st.markdown(f"""
-            <div style="font-size: 12px; padding: 8px; background: #f9f9f9; border-radius: 8px; margin: 8px 0;">
-                {mem.get('content', '')[:80]}...
+
+        if not recent:
+            st.markdown("""
+            <div style="font-size: 12px; color: #888; padding: 8px; text-align: center;">
+                No memories yet.<br>Click "Update Memory" or chat more to generate memories.
             </div>
             """, unsafe_allow_html=True)
+        else:
+            for mem in recent:
+                st.markdown(f"""
+                <div style="font-size: 12px; padding: 8px; background: #f9f9f9; border-radius: 8px; margin: 8px 0;">
+                    <span class="memory-text">[{mem.get('type', '')}]</span><br>
+                    <span style="color: #333;">{mem.get('content', '')[:80]}</span>
+                </div>
+                """, unsafe_allow_html=True)
 
         st.markdown("</div>", unsafe_allow_html=True)
 

@@ -5,7 +5,7 @@ A local prototype for an AI pocket pet that evolves over time with advanced memo
 ## Features
 
 - **Pet Naming**: Name your AI companion on first run
-- **Interactive Chat**: Conversational interface with your pet
+- **Interactive Chat**: Conversational interface with your pet (MiniMax API or template fallback)
 - **Pet States**: Mood, hunger, and health tracking with visual indicators
 - **Advanced Memory System**:
   - Short-term memory with score-based eviction
@@ -14,6 +14,7 @@ A local prototype for an AI pocket pet that evolves over time with advanced memo
   - Emotional valence estimation
 - **Data Persistence**: All data stored locally (JSON/CSV)
 - **Scheduled Memory Updates**: APScheduler-based daily extraction
+- **Dual Backup**: Original conversation history preserved separately
 
 ## Architecture
 
@@ -21,14 +22,38 @@ A local prototype for an AI pocket pet that evolves over time with advanced memo
 sweekar/
 ├── app.py                      # Streamlit UI entry point
 ├── chat/
-│   └── chat_engine.py          # Chat processing + JSONL append-safe writes
+│   └── chat_engine.py          # Chat processing + MiniMax API integration
 ├── memory/
 │   ├── memory_pipeline.py      # Advanced memory pipeline
 │   └── run_daily_update.py     # APScheduler-based memory updater
 ├── config/
 │   └── pet_config.py           # Pet configuration and state management
-└── storage/                    # Data storage (gitignored, regenerated on first run)
+├── storage/                    # Runtime data (gitignored)
+└── backup/                     # Clean backup of conversations (gitignored)
 ```
+
+## MiniMax API Configuration
+
+Set your API key as an environment variable (never commit to git):
+
+```bash
+# Linux/Mac
+export MINIMAX_API_KEY="your_api_key_here"
+
+# Windows (CMD)
+set MINIMAX_API_KEY=your_api_key_here
+
+# Windows (PowerShell)
+$env:MINIMAX_API_KEY="your_api_key_here"
+```
+
+Or create a `.env` file (make sure `.env` is in `.gitignore`):
+
+```
+MINIMAX_API_KEY=your_api_key_here
+```
+
+**Note**: If no API key is set, the app uses template-based responses instead.
 
 ## Memory System (Advanced)
 
@@ -70,7 +95,7 @@ Trait stability levels:
 ## Installation
 
 ```bash
-pip install streamlit apscheduler
+pip install streamlit apscheduler openai
 ```
 
 ## Running the App
@@ -104,6 +129,8 @@ python -m memory.run_daily_update --interval 12
 
 ## Data Storage
 
+### Primary Storage (`storage/`)
+
 | File | Description |
 |------|-------------|
 | `storage/conversation.jsonl` | All chat messages (append-only, gitignored) |
@@ -111,8 +138,21 @@ python -m memory.run_daily_update --interval 12
 | `storage/long_memory.json` | Promoted long-term memories |
 | `storage/profile_events.csv` | Raw extracted events (append-only) |
 | `storage/profile_traits.csv` | User traits with strength decay |
+
+### Configuration (`config/`)
+
+| File | Description |
+|------|-------------|
 | `config/pet_config.json` | Pet name and settings (gitignored) |
 | `config/pet_state.json` | Live pet state (gitignored) |
+
+### Backup (`backup/`)
+
+| File | Description |
+|------|-------------|
+| `backup/conversation_history.jsonl` | Original conversation backup (gitignored) |
+
+**Important**: All user conversations are stored in both `storage/conversation.jsonl` (for UI) and `backup/conversation_history.jsonl` (clean backup). The backup is never modified by memory extraction and serves as a clean source for re-processing.
 
 ## Memory Pipeline Flow
 
@@ -128,6 +168,7 @@ python -m memory.run_daily_update --interval 12
 
 - **Frontend**: Streamlit
 - **Backend**: Python
+- **AI**: MiniMax API (optional, template fallback available)
 - **Storage**: JSONL (conversations), JSON (memories), CSV (profiles)
 - **Scheduler**: APScheduler
 

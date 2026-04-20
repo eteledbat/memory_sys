@@ -33,11 +33,17 @@ ehthumbs.db
 # Logs
 *.log
 
+# API keys and env
+.env
+
 # Runtime data (regenerate on first run)
 storage/*.jsonl
 storage/*.json
 storage/*.csv
 !storage/.gitkeep
+
+# Backup (original conversations, never modified)
+backup/
 
 config/pet_config.json
 config/pet_state.json
