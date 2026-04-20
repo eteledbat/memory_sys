@@ -119,7 +119,9 @@ class MemoryPipeline:
 
         self.base_dir = base_dir
         self.storage_dir = os.path.join(base_dir, 'storage')
-        self.conversation_file = os.path.join(self.storage_dir, 'conversation.jsonl')
+        self.backup_dir = os.path.join(base_dir, 'backup')
+        # Read from backup for clean data (not polluted by UI processing)
+        self.conversation_file = os.path.join(self.backup_dir, 'conversation_history.jsonl')
 
         # In-memory caches
         self.short_term: Dict[str, ShortTermMemory] = {}
@@ -128,6 +130,7 @@ class MemoryPipeline:
         self.pending_events: List[ProfileEvent] = []
 
         os.makedirs(self.storage_dir, exist_ok=True)
+        os.makedirs(self.backup_dir, exist_ok=True)
 
         # Load existing data
         self._load_all_data()
@@ -466,12 +469,17 @@ class MemoryPipeline:
     # =========================================================================
 
     def load_conversations(self, days: int = 7) -> List[Dict]:
-        """Load recent conversations from JSONL"""
+        """Load recent conversations from JSONL (reads from backup)"""
         conversations = []
         cutoff = datetime.now().timestamp() - (days * 86400)
 
         if not os.path.exists(self.conversation_file):
-            return []
+            # Fallback to storage if backup doesn't exist
+            backup_path = os.path.join(self.storage_dir, 'conversation.jsonl')
+            if os.path.exists(backup_path):
+                self.conversation_file = backup_path
+            else:
+                return []
 
         try:
             with open(self.conversation_file, 'r', encoding='utf-8') as f:
